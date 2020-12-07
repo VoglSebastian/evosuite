@@ -437,9 +437,9 @@ public class MSecurityManager extends SecurityManager {
 				 */
 				statistics.permissionDenied(perm);
 			}
-			logger.debug("Security manager blocks permission {}, name: {}, class :{}, stack:{}", perm, perm.getName(), perm.getClass(), stack);
+			logger.debug("Security manager blocks permission " + perm + stack);
 
-			throw new SecurityException("Security manager blocks " + perm + " ,name: " +perm.getName() + " ,class: " + perm.getClass()+", stack " + stack);
+			throw new SecurityException("Security manager blocks " + perm + stack);
 		} else {
 			if (executingTestCase) {
 				statistics.permissionAllowed(perm);
@@ -490,12 +490,6 @@ public class MSecurityManager extends SecurityManager {
 				"getStackTrace".equals(perm.getName().trim())) {
 			return true;
 		}
-
-
-		/*if (perm instanceof RuntimePermission &&
-				"write".equals(perm.getName().trim())){
-			return true;
-		}*/
 
 		// Required in Java 11. Otherwise MSecurityManager.testCanLoadSwingStuff() fails du to the denied permission.
 		if (perm instanceof RuntimePermission &&
@@ -1363,7 +1357,6 @@ public class MSecurityManager extends SecurityManager {
 					}
 				}
 			} else if(fp.getName().contains("evosuite-graphs")){
-				logger.debug("allowing {}", fp);
 				return true;
 			}
 
@@ -1384,7 +1377,6 @@ public class MSecurityManager extends SecurityManager {
 			return true;
 		}
 
-		logger.debug("denying {}", fp);
 		return false;
 	}
 }
