@@ -120,7 +120,11 @@ public class InstrumentingClassLoader extends ClassLoader {
                 if (result != null) {
                     return result;
                 }
-                result = classLoader.loadClass(name);
+                try {
+					result = classLoader.loadClass(name);
+				} catch (ClassNotFoundException e){
+                	result = Thread.currentThread().getContextClassLoader().loadClass(name);
+				}
                 return result;
             }
     

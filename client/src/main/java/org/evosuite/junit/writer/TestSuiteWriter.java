@@ -87,6 +87,8 @@ public class TestSuiteWriter implements Opcodes {
 
     private TestNameGenerationStrategy nameGenerator = null;
 
+    private boolean hasExecutorDefined = false;
+
     /**
      * Add test to suite. If the test is a prefix of an existing test, just keep
      * existing test. If an existing test is a prefix of the test, replace the
@@ -182,6 +184,8 @@ public class TestSuiteWriter implements Opcodes {
      * @param directory Output directory
      */
     public List<File> writeTestSuite(String name, String directory, List<ExecutionResult> cachedResults) throws IllegalArgumentException {
+
+        hasExecutorDefined = false;
 
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Empty test class name");
@@ -327,6 +331,7 @@ public class TestSuiteWriter implements Opcodes {
         builder.append(getHeader(name, name, results));
 
         if (!Properties.TEST_SCAFFOLDING && !Properties.NO_RUNTIME_DEPENDENCY) {
+            hasExecutorDefined = true;
             builder.append(new Scaffolding().getBeforeAndAfterMethods(name, wasSecurityException, results));
         }
         
@@ -539,6 +544,7 @@ public class TestSuiteWriter implements Opcodes {
         builder.append(adapter.getClassDefinition(test_name));
 
         if (Properties.TEST_SCAFFOLDING && !Properties.NO_RUNTIME_DEPENDENCY) {
+            hasExecutorDefined = true;
             builder.append(" extends " + Scaffolding.getFileName(scaffolding_name));
         }
 
@@ -656,7 +662,7 @@ public class TestSuiteWriter implements Opcodes {
             }
         }
 
-        if (wasSecurityException) {
+        if (wasSecurityException && hasExecutorDefined) {
             builder.append(BLOCK_SPACE);
             builder.append("Future<?> future = " + Scaffolding.EXECUTOR_SERVICE
                     + ".submit(new Runnable(){ ");
@@ -681,7 +687,7 @@ public class TestSuiteWriter implements Opcodes {
             builder.append(NEWLINE);
         }
 
-        if (wasSecurityException) {
+        if (wasSecurityException && hasExecutorDefined) {
             Set<Class<?>> exceptions = test.getDeclaredExceptions();
             if (!exceptions.isEmpty()) {
                 builder.append(INNER_INNER_BLOCK_SPACE);

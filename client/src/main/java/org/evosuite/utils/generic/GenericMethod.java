@@ -347,6 +347,7 @@ public class GenericMethod extends GenericAccessibleObject<GenericMethod> {
 	// assumes "static java.util.Date aDate;" declared
 	private void readObject(ObjectInputStream ois) throws ClassNotFoundException,
 	        IOException {
+		GenericClass.addCPtoClassPath();
 		ois.defaultReadObject();
 
 		// Read/initialize additional fields

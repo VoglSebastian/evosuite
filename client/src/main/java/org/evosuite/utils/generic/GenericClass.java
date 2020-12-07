@@ -27,9 +27,12 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.TypeUtils;
@@ -1684,6 +1687,35 @@ public class GenericClass implements Serializable {
 		return type.toString();
 	}
 
+	public static void addCPtoClassPath() throws MalformedURLException {
+				/*
+		// ProjectCP is added to ClassLoader to ensure Dependencies of the class can be loaded.
+		*/
+		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+		List<URL> cpUrls = new ArrayList<>();
+		for (String s : Properties.CP.split(":")) {
+			File file = new File(s);
+			URI u = file.toURI();
+			URL url = u.toURL();
+			cpUrls.add(url);
+		}
+		// If the ContextClassLoader contains already the project cp, we don't add another one
+		// We assume, that if the contextClassLoader is no URLClassLoader, it does not contain the projectCP
+		List<URL> notContainedInClassLoader = new ArrayList<>(cpUrls.size());
+		for(URL cpURL : cpUrls) {
+			if (!(contextClassLoader instanceof URLClassLoader) || !Arrays.asList(((URLClassLoader) contextClassLoader).getURLs()).contains(cpURL)) {
+				notContainedInClassLoader.add(cpURL);
+			}
+		}
+
+		if(!notContainedInClassLoader.isEmpty()){
+			URL[] urls = new URL[notContainedInClassLoader.size()];
+			notContainedInClassLoader.toArray(urls);
+			URLClassLoader urlClassLoader = new URLClassLoader(urls, contextClassLoader);
+			Thread.currentThread().setContextClassLoader(urlClassLoader);
+		}
+	}
+
 	/**
 	 * De-serialize. Need to use current classloader.
 	 * 
@@ -1693,21 +1725,7 @@ public class GenericClass implements Serializable {
 	 */
 	private void readObject(ObjectInputStream ois) throws ClassNotFoundException,
 	        IOException {
-		/*
-		// ProjectCP is added to ClassLoader to ensure Dependencies of the class can be loaded.
-		*/
-		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-		URL cpURL = new File(Properties.CP).toURI().toURL();
-		// If the ContextClassLoader contains already the project cp, we don't add another one
-		// We assume, that if the contextClassLoader is no URLClassLoader, it does not contain the projectCP
-		if(! (contextClassLoader instanceof URLClassLoader) ||
-				!Arrays.asList(((URLClassLoader) contextClassLoader).getURLs()).contains(cpURL)) {
-			URL[] urls;
-			urls = new URL[]{cpURL};
-			URLClassLoader urlClassLoader = new URLClassLoader(urls, contextClassLoader);
-			Thread.currentThread().setContextClassLoader(urlClassLoader);
-		}
-
+		addCPtoClassPath();
 		String name = (String) ois.readObject();
 		if (name == null) {
 			this.rawClass = null;
