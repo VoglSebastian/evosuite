@@ -36,11 +36,7 @@ import java.security.Permission;
 import java.security.SecurityPermission;
 import java.security.UnresolvedPermission;
 import java.sql.SQLPermission;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.PropertyPermission;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.FileHandler;
 import java.util.logging.LoggingPermission;
@@ -58,6 +54,7 @@ import javax.sound.sampled.AudioPermission;
 import javax.xml.ws.WebServicePermission;
 
 import org.evosuite.PackageInfo;
+import org.evosuite.runtime.Runtime;
 import org.evosuite.runtime.RuntimeSettings;
 import org.evosuite.runtime.vfs.VirtualFileSystem;
 import org.slf4j.Logger;
@@ -440,9 +437,9 @@ public class MSecurityManager extends SecurityManager {
 				 */
 				statistics.permissionDenied(perm);
 			}
-			logger.debug("Security manager blocks permission " + perm + stack);
+			logger.debug("Security manager blocks permission {}, name: {}, class :{}, stack:{}", perm, perm.getName(), perm.getClass(), stack);
 
-			throw new SecurityException("Security manager blocks " + perm + stack);
+			throw new SecurityException("Security manager blocks " + perm + " ,name: " +perm.getName() + " ,class: " + perm.getClass()+", stack " + stack);
 		} else {
 			if (executingTestCase) {
 				statistics.permissionAllowed(perm);
@@ -478,7 +475,6 @@ public class MSecurityManager extends SecurityManager {
 	 * @return false if access is forbidden, true otherwise
 	 */
 	private boolean allowPermission(Permission perm) {
-
 		if (RuntimeSettings.sandboxMode.equals(Sandbox.SandboxMode.OFF)) {
 			/*
 			 * allow everything
@@ -490,14 +486,26 @@ public class MSecurityManager extends SecurityManager {
 		 * We should always allow to check the stack trace,
 		 * as we use it for debugging (ie when logging)
 		 */
-		if (perm instanceof RuntimePermission && 
+		if (perm instanceof RuntimePermission &&
 				"getStackTrace".equals(perm.getName().trim())) {
 			return true;
 		}
 
+
+		/*if (perm instanceof RuntimePermission &&
+				"write".equals(perm.getName().trim())){
+			return true;
+		}*/
+
 		// Required in Java 11. Otherwise MSecurityManager.testCanLoadSwingStuff() fails du to the denied permission.
 		if (perm instanceof RuntimePermission &&
 				"loggerFinder".equals(perm.getName().trim())){
+			return true;
+		}
+
+		// Allowed for write_cfg
+		if(perm instanceof RuntimePermission &&
+		        "writeFileDescriptor".equals(perm.getName().trim())){
 			return true;
 		}
 		
@@ -1354,7 +1362,11 @@ public class MSecurityManager extends SecurityManager {
 						return true;
 					}
 				}
+			} else if(fp.getName().contains("evosuite-graphs")){
+				logger.debug("allowing {}", fp);
+				return true;
 			}
+
 		} else if(action.equals("delete")) {
 			if(fp.getName().contains("clover.db.liverec")) {
 				/*
@@ -1367,8 +1379,12 @@ public class MSecurityManager extends SecurityManager {
 					}
 				}
 			}
+		} else if(action.equals("execute")) {
+			// TODO proper handling of execute Permission
+			return true;
 		}
 
+		logger.debug("denying {}", fp);
 		return false;
 	}
 }
